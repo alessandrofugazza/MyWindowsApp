@@ -1736,12 +1736,16 @@ void MainWindow::restoreStudyButtonSettings()
         if (!columnLayout)
             continue;
 
-        QList<QPushButton*> priorityButtons;
+        QList<QPushButton*> touchedButtons;
+        QList<QPushButton*> untouchedButtons;
 
         for (int i = 0; i < columnLayout->count(); ++i)
         {
-            QWidget *widget = columnLayout->itemAt(i)->widget();
-            QPushButton *btn = qobject_cast<QPushButton*>(widget);
+            QWidget *widget =
+                columnLayout->itemAt(i)->widget();
+
+            QPushButton *btn =
+                qobject_cast<QPushButton*>(widget);
 
             if (!btn)
                 continue;
@@ -1749,29 +1753,52 @@ void MainWindow::restoreStudyButtonSettings()
             if (!btn->property("trackedColorButton").toBool())
                 continue;
 
-            priorityButtons.append(btn);
+            QDateTime lastDone =
+                btn->property("lastDone").toDateTime();
+
+            if (lastDone.isValid())
+                touchedButtons.append(btn);
+            else
+                untouchedButtons.append(btn);
         }
 
-        std::sort(priorityButtons.begin(), priorityButtons.end(), [](QPushButton *a, QPushButton *b)
-                  {
-                      QDateTime aDone = a->property("lastDone").toDateTime();
-                      QDateTime bDone = b->property("lastDone").toDateTime();
+        std::sort(
+            touchedButtons.begin(),
+            touchedButtons.end(),
+            [](QPushButton *a, QPushButton *b)
+            {
+                return
+                    a->property("lastDone").toDateTime()
+                    <
+                    b->property("lastDone").toDateTime();
+            }
+            );
 
-                      if (aDone.isValid() != bDone.isValid())
-                          return !aDone.isValid();
+        for (int i = untouchedButtons.size() - 1; i > 0; --i)
+        {
+            int j =
+                QRandomGenerator::global()->bounded(i + 1);
 
-                      if (aDone.isValid() && bDone.isValid() && aDone != bDone)
-                          return aDone < bDone;
+            untouchedButtons.swapItemsAt(i, j);
+        }
 
-                      return a->property("originalIndex").toInt() < b->property("originalIndex").toInt();
-                  });
+        QList<QPushButton*> finalOrder =
+            untouchedButtons + touchedButtons;
 
-        for (QPushButton *btn : priorityButtons)
+        for (QPushButton *btn : finalOrder)
         {
             columnLayout->removeWidget(btn);
-            int insertIndex = columnLayout->count() - 1;
-            if (insertIndex < 0) insertIndex = 0;
-            columnLayout->insertWidget(insertIndex, btn);
+
+            int insertIndex =
+                columnLayout->count() - 1;
+
+            if (insertIndex < 0)
+                insertIndex = 0;
+
+            columnLayout->insertWidget(
+                insertIndex,
+                btn
+                );
         }
     }
 }
