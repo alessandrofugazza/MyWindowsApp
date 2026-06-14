@@ -697,6 +697,12 @@ bool MainWindow::nativeEvent(
 
         writeSettings();
 
+        if (isMinimized())
+            showNormal();
+
+        raise();
+        activateWindow();
+
         // notification for user
         QMessageBox::information(
             this,
