@@ -1592,7 +1592,7 @@ void MainWindow::setupStudyButtons()
 
     QWidget *studyButtonsContainer = new QWidget(ui->productionViewContainer);
     studyButtonsContainer->setObjectName("studyButtonsContainer");
-    studyButtonsContainer->setGeometry(20, 20, 1720, 580);
+    studyButtonsContainer->setGeometry(20, 20, 1720, 900);
 
     QHBoxLayout *mainLayout = new QHBoxLayout(studyButtonsContainer);
     mainLayout->setSpacing(columnGap);
