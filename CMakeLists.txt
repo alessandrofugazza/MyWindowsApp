@@ -22,7 +22,7 @@ qt_add_executable(myWindowsApp
     Models/dogownerrating.cpp
     rockwidget.h rockwidget.cpp
     resources.qrc
-    app.rc
+    # app.rc
 
 
 )
