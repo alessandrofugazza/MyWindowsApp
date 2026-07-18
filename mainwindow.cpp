@@ -1591,15 +1591,15 @@ void MainWindow::setupStudyButtons()
     const int columnGap = 32;
 
     QWidget *studyButtonsContainer = new QWidget(ui->productionViewContainer);
-
+    studyButtonsContainer->setObjectName("studyButtonsContainer");
     int titleHeight =
         QLabel("Priority 1").sizeHint().height();
 
     const int buttonSpacing = 10; const int maxButtons = 10; int containerHeight = titleHeight + maxButtons * maxButtonHeight + (maxButtons - 1) * buttonSpacing; studyButtonsContainer->setGeometry( 20, 20, 1720, containerHeight );
 
 
-    studyButtonsContainer->setObjectName("studyButtonsContainer");
-    studyButtonsContainer->setGeometry(20, 20, 1720, 900);
+
+
 
     QHBoxLayout *mainLayout = new QHBoxLayout(studyButtonsContainer);
     mainLayout->setSpacing(columnGap);
