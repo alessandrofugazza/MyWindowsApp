@@ -32,7 +32,7 @@ QList<StudyButton> defaultStudyButtons()
             {"Learn", 6, "Chrome"},
             {"Markdown", 3, "Chrome"},
             {"Netlify", 4, "Chrome"},
-            {"Nursing", 1, "Chrome"},
+            {"Shortcuts", 1, "Chrome"},
             {"Obsidian", 2, "Chrome"},
             {"Poker", 1, "Chrome"},
             {"Power User", 7, "Chrome"},

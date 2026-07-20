@@ -549,6 +549,19 @@
           </item>
          </layout>
         </widget>
+        <widget class="QPushButton" name="studyIsDoneBtn">
+         <property name="geometry">
+          <rect>
+           <x>880</x>
+           <y>780</y>
+           <width>111</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Study done</string>
+         </property>
+        </widget>
         <zorder>layoutWidget</zorder>
         <zorder>layoutWidget</zorder>
         <zorder>layoutWidget</zorder>
@@ -565,6 +578,7 @@
         <zorder>undoBtn</zorder>
         <zorder>trackingStartedAtLbl</zorder>
         <zorder>label_4</zorder>
+        <zorder>studyIsDoneBtn</zorder>
        </widget>
       </widget>
       <widget class="QWidget" name="optionsView">
@@ -609,7 +623,7 @@
      <x>0</x>
      <y>0</y>
      <width>2434</width>
-     <height>17</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSections">
