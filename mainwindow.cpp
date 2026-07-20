@@ -101,6 +101,13 @@ MainWindow::MainWindow(QWidget *parent)
         );
 
     connect(
+        ui->studyIsDoneBtn,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::onStudyIsDoneBtnClicked
+        );
+
+    connect(
         ui->undoBtn,
         &QPushButton::clicked,
         this,
@@ -545,175 +552,8 @@ bool MainWindow::nativeEvent(
         // REFACTOR maybe refactor this into separate functions for each hotkey to avoid having too much code in the switch cases and improve readability
     case FINISH_HOTKEY_ID:
     {
-        // qDebug() << "Shift + Alt + D pressed globally";
 
-        QPushButton *selectedButton = nullptr;
-
-        QList<QPushButton*> buttons = findChildren<QPushButton*>();
-
-        // finds currently active btn
-        for (QPushButton *btn : std::as_const(buttons))
-        {
-            if (!btn->property("trackedColorButton").toBool())
-                continue;
-
-            if (!btn->property("selected").toBool())
-                continue;
-
-            selectedButton = btn;
-            break;
-        }
-
-        // breaks if no selected btn
-        if (selectedButton == nullptr)
-        {
-            QMessageBox::information(
-                this,
-                "No selected topic",
-                "No topic button was clicked yet."
-                );
-
-            // qDebug() << "Global hotkey pressed, but no selected topic exists";
-
-            return true;
-        }
-
-        QDateTime lastClicked =
-            selectedButton->property("lastClicked").toDateTime();
-
-        // safety check
-        if (!lastClicked.isValid())
-        {
-            QMessageBox::warning(
-                this,
-                "No last clicked time",
-                QString("Selected topic '%1' has no valid lastClicked time.")
-                    .arg(selectedButton->objectName())
-                );
-
-            qDebug() << "Global hotkey pressed, but selected topic has no valid lastClicked";
-
-            return true;
-        }
-
-        QDateTime lastDone =
-            QDateTime::currentDateTime();
-
-        selectedButton->setProperty("lastDone", lastDone);
-
-        qint64 pausedSeconds =
-            selectedButton->property("pausedSeconds").toLongLong();
-
-        bool isPaused =
-            selectedButton->property("isPaused").toBool();
-
-        QDateTime pauseStartedAt =
-            selectedButton->property("pauseStartedAt").toDateTime();
-
-        if (isPaused && pauseStartedAt.isValid())
-        {
-            qint64 finalPausedSeconds =
-                pauseStartedAt.secsTo(lastDone);
-
-            if (finalPausedSeconds < 0)
-                finalPausedSeconds = 0;
-
-            pausedSeconds += finalPausedSeconds;
-
-            // qDebug() << "Finish pressed while topic was paused";
-            // qDebug() << "Final paused seconds added:" << finalPausedSeconds;
-        }
-
-        qint64 elapsedSeconds =
-            lastClicked.secsTo(lastDone) - pausedSeconds;
-
-        if (elapsedSeconds < 0)
-            elapsedSeconds = 0;
-
-        // qDebug() << "Finish elapsed raw seconds:"
-        //          << lastClicked.secsTo(lastDone);
-
-        // qDebug() << "Finish elapsed paused seconds excluded:"
-        //          << pausedSeconds;
-
-        // qDebug() << "Finish elapsed active seconds:"
-        //          << elapsedSeconds;
-
-
-        // updates cumulative seconds by adding the elapsed seconds of this run to the previous cumulative seconds
-        qint64 cumulativeSeconds =
-            selectedButton->property("cumulativeSeconds").toLongLong();
-
-        cumulativeSeconds += elapsedSeconds;
-
-        selectedButton->setProperty("cumulativeSeconds", cumulativeSeconds);
-
-        // resets pause-related properties
-        selectedButton->setProperty("isPaused", false);
-        selectedButton->setProperty("pauseStartedAt", QDateTime());
-        selectedButton->setProperty("pausedSeconds", 0);
-
-        // update elapsed time text for debug and message box
-        qint64 elapsedHours =
-            elapsedSeconds / 3600;
-
-        qint64 elapsedMinutes =
-            (elapsedSeconds % 3600) / 60;
-
-        qint64 remainingSeconds =
-            elapsedSeconds % 60;
-
-        QString elapsedText =
-            QString("%1h %2m %3s")
-                .arg(elapsedHours)
-                .arg(elapsedMinutes)
-                .arg(remainingSeconds);
-
-        // remove selected
-        selectedButton->setProperty("selected", false);
-
-        // stop tracking progress since the topic is now done
-        progressIsBeingTracked = false;
-
-        // updates gui
-        updateButtonColor(
-            selectedButton,
-            buttonColorReferenceTime(selectedButton)
-            );
-
-        updateButtonStatsLabels(selectedButton);
-
-        checkTaskWithChance();
-
-        // qDebug() << "Global hotkey pressed";
-        // qDebug() << "Last done saved for" << selectedButton->objectName();
-        // qDebug() << "Elapsed between lastClicked and lastDone:" << elapsedText;
-
-        statusBar() -> showMessage(
-            QString("Finished '%1' in %2")
-                .arg(selectedButton->objectName())
-                .arg(elapsedText)
-            );
-
-        writeSettings();
-
-        if (isMinimized())
-            showNormal();
-
-        raise();
-        activateWindow();
-
-        // notification for user
-        QMessageBox::information(
-            this,
-            "Topic finished",
-            QString("You spent %1 on '%2'.")
-                .arg(elapsedText)
-                .arg(selectedButton->objectName())
-            );
-
-
-
+        finishCurrentStudy();
         return true;
     }
     case PAUSE_HOTKEY_ID:
@@ -899,6 +739,181 @@ bool MainWindow::nativeEvent(
         );
 }
 
+
+void MainWindow::onStudyIsDoneBtnClicked()
+{
+    finishCurrentStudy();
+}
+
+void MainWindow::finishCurrentStudy()
+{
+    // qDebug() << "Shift + Alt + D pressed globally";
+
+    QPushButton *selectedButton = nullptr;
+
+    QList<QPushButton*> buttons = findChildren<QPushButton*>();
+
+    // finds currently active btn
+    for (QPushButton *btn : std::as_const(buttons))
+    {
+        if (!btn->property("trackedColorButton").toBool())
+            continue;
+
+        if (!btn->property("selected").toBool())
+            continue;
+
+        selectedButton = btn;
+        break;
+    }
+
+    // breaks if no selected btn
+    if (selectedButton == nullptr)
+    {
+        QMessageBox::information(
+            this,
+            "No selected topic",
+            "No topic button was clicked yet."
+            );
+
+        // qDebug() << "Global hotkey pressed, but no selected topic exists";
+
+        return;
+    }
+
+    QDateTime lastClicked =
+        selectedButton->property("lastClicked").toDateTime();
+
+    // safety check
+    if (!lastClicked.isValid())
+    {
+        QMessageBox::warning(
+            this,
+            "No last clicked time",
+            QString("Selected topic '%1' has no valid lastClicked time.")
+                .arg(selectedButton->objectName())
+            );
+
+        qDebug() << "Global hotkey pressed, but selected topic has no valid lastClicked";
+
+        return;
+    }
+
+    QDateTime lastDone =
+        QDateTime::currentDateTime();
+
+    selectedButton->setProperty("lastDone", lastDone);
+
+    qint64 pausedSeconds =
+        selectedButton->property("pausedSeconds").toLongLong();
+
+    bool isPaused =
+        selectedButton->property("isPaused").toBool();
+
+    QDateTime pauseStartedAt =
+        selectedButton->property("pauseStartedAt").toDateTime();
+
+    if (isPaused && pauseStartedAt.isValid())
+    {
+        qint64 finalPausedSeconds =
+            pauseStartedAt.secsTo(lastDone);
+
+        if (finalPausedSeconds < 0)
+            finalPausedSeconds = 0;
+
+        pausedSeconds += finalPausedSeconds;
+
+        // qDebug() << "Finish pressed while topic was paused";
+        // qDebug() << "Final paused seconds added:" << finalPausedSeconds;
+    }
+
+    qint64 elapsedSeconds =
+        lastClicked.secsTo(lastDone) - pausedSeconds;
+
+    if (elapsedSeconds < 0)
+        elapsedSeconds = 0;
+
+    // qDebug() << "Finish elapsed raw seconds:"
+    //          << lastClicked.secsTo(lastDone);
+
+    // qDebug() << "Finish elapsed paused seconds excluded:"
+    //          << pausedSeconds;
+
+    // qDebug() << "Finish elapsed active seconds:"
+    //          << elapsedSeconds;
+
+
+    // updates cumulative seconds by adding the elapsed seconds of this run to the previous cumulative seconds
+    qint64 cumulativeSeconds =
+        selectedButton->property("cumulativeSeconds").toLongLong();
+
+    cumulativeSeconds += elapsedSeconds;
+
+    selectedButton->setProperty("cumulativeSeconds", cumulativeSeconds);
+
+    // resets pause-related properties
+    selectedButton->setProperty("isPaused", false);
+    selectedButton->setProperty("pauseStartedAt", QDateTime());
+    selectedButton->setProperty("pausedSeconds", 0);
+
+    // update elapsed time text for debug and message box
+    qint64 elapsedHours =
+        elapsedSeconds / 3600;
+
+    qint64 elapsedMinutes =
+        (elapsedSeconds % 3600) / 60;
+
+    qint64 remainingSeconds =
+        elapsedSeconds % 60;
+
+    QString elapsedText =
+        QString("%1h %2m %3s")
+            .arg(elapsedHours)
+            .arg(elapsedMinutes)
+            .arg(remainingSeconds);
+
+    // remove selected
+    selectedButton->setProperty("selected", false);
+
+    // stop tracking progress since the topic is now done
+    progressIsBeingTracked = false;
+
+    // updates gui
+    updateButtonColor(
+        selectedButton,
+        buttonColorReferenceTime(selectedButton)
+        );
+
+    updateButtonStatsLabels(selectedButton);
+
+    checkTaskWithChance();
+
+    // qDebug() << "Global hotkey pressed";
+    // qDebug() << "Last done saved for" << selectedButton->objectName();
+    // qDebug() << "Elapsed between lastClicked and lastDone:" << elapsedText;
+
+    statusBar() -> showMessage(
+        QString("Finished '%1' in %2")
+            .arg(selectedButton->objectName())
+            .arg(elapsedText)
+        );
+
+    writeSettings();
+
+    if (isMinimized())
+        showNormal();
+
+    raise();
+    activateWindow();
+
+    // notification for user
+    QMessageBox::information(
+        this,
+        "Topic finished",
+        QString("You spent %1 on '%2'.")
+            .arg(elapsedText)
+            .arg(selectedButton->objectName())
+        );
+}
 
 // *****************************************************************************************************************
 // TASK CHANCE
@@ -1595,7 +1610,20 @@ void MainWindow::setupStudyButtons()
     int titleHeight =
         QLabel("Priority 1").sizeHint().height();
 
-    const int buttonSpacing = 10; const int maxButtons = 10; int containerHeight = titleHeight + maxButtons * maxButtonHeight + (maxButtons - 1) * buttonSpacing; studyButtonsContainer->setGeometry( 20, 20, 1720, containerHeight );
+    const int buttonSpacing = 10;
+    const int maxButtons = 10;
+
+    const int containerHeight =
+        titleHeight
+        + maxButtons * maxButtonHeight
+        + maxButtons * buttonSpacing;
+
+    studyButtonsContainer->setGeometry(
+        20,
+        20,
+        1720,
+        containerHeight
+        );
 
 
 

@@ -122,6 +122,8 @@ private:
     // bool m_didTraining;
 
     int currentTaskIntervalMinutes = baseTaskMinutes;
+    void onStudyIsDoneBtnClicked();
+    void finishCurrentStudy();
 
 
 
